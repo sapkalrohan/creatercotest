@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>@(model.user.name)</title>
+</head>
+<body>
+    <h1>Hi @(model.user.name)</h1>
+    <div>
+    <ul>
+        @model.users.forEach(x=>{
+            <li>@x.name
+            @if(x.name != model.user.name)
+            {
+            if(x.f.includes(model.user.name))
+            {
+                <input type="button" value="unfollow" user="@x.name" onclick="action(this)">
+                }else{
+                <input type="button" value="follow" user="@x.name" onclick="action(this)">
+                }
+            }
+            </li>
+        })
+    </ul>
+    </div>
+    <div>feed
+        <div>
+            <ul id="feed">
+            </ul>
+        </div>
+    </div>
+    <script src="https://www.gstatic.com/firebasejs/5.5.5/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/5.5.5/firebase-firestore.js"></script>
+    
+<script>
+  // Initialize Firebase
+  var config = {
+    apiKey: "AIzaSyDQcgEfQS5VlBZOz4d-eTDT8-wlnh9ZlTs",
+    authDomain: "creatortest.firebaseapp.com",
+    databaseURL: "https://creatortest.firebaseio.com",
+    projectId: "creatortest",
+    storageBucket: "creatortest.appspot.com",
+    messagingSenderId: "201465061187"
+  };
+  firebase.initializeApp(config);
+  var db = firebase.firestore();
+  db.settings({timestampsInSnapshots:true});
+  var userdata = @html.raw(JSON.stringify(model.user))
+  var feed = document.querySelector("#feed")
+  function action(e)
+  {
+      var targetuser = e.attributes["user"].value;
+      var targetaction = e.attributes["value"].value;
+      db.collection('users').where('name','==',targetuser).get().then(x=>{
+          userdoc = x.docs[0];
+          var newf = userdoc.data().f;
+          if(targetaction=="unfollow")
+          {
+            newf = newf.filter(item => item != userdata.name)
+            e.attributes["value"].value = "follow";
+          }else{
+            newf = newf.concat(userdata.name);
+            e.attributes["value"].value = "unfollow";
+          }
+          if(newf.length==0) newf=[""]
+          db.collection('users').doc(userdoc.id).update({f:newf});
+      })
+  }
+  function renderfeed(f){
+      feed.innerHTML="";
+    f.forEach(x=>{
+        if(x!="") feed.innerHTML+="<li>"+x+"</li>";
+    })
+    }
+
+    renderfeed(userdata.f);
+  db.collection('users').onSnapshot(snap=>{
+      window.snap=snap;
+      db.collection('users').doc(snap.docChanges()[0].doc.id).get().then(q=>{
+          var newdata = q.data();
+          console.log(newdata);
+          if(userdata.name==newdata.name) renderfeed(newdata.f)
+          })
+  })
+</script>
+</body>
+</html>
